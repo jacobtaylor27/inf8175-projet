@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug my_player.py",
+            "type": "python",
+            "request": "launch",
+            "program": "main_abalone.py",
+            "args": [
+                "-t", "local",
+                "random_player_abalone.py",
+                "./my_player.py",
+                "-g"
+            ],
+            "console": "integratedTerminal"
+        }
+    ]
+}
