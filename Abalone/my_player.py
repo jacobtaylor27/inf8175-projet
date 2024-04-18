@@ -64,10 +64,6 @@ class MyPlayer(PlayerAbalone):
         opponent_player_score = state.scores[opponent.get_id()]
         heuristic = player_score
         
-
-        if curr_move == 48 and opponent_player_score < previous_opponent_score:
-            heuristic += 500
-
         if opponent_player_score == -6:
             heuristic += 500
 
