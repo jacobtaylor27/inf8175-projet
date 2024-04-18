@@ -37,6 +37,8 @@ def get_opponent(state: GameStateAbalone, player: PlayerAbalone,) -> PlayerAbalo
 def get_score_difference(state: GameStateAbalone, player: PlayerAbalone, scores: dict[int, float]) -> int:
     heuristic = 0
     opponent = get_opponent(state, player)
+    curr_move = state.get_step()
+    weight = curr_move / 50
 
     previous_player_score = scores[player.get_id()]
     previous_opponent_score = scores[opponent.get_id()]
@@ -44,12 +46,20 @@ def get_score_difference(state: GameStateAbalone, player: PlayerAbalone, scores:
     player_score = state.scores[player.get_id()]
     opponent_player_score = state.scores[opponent.get_id()]
 
+    if opponent_player_score == -6:
+        heuristic += 300 
+    
+    if player_score == -6:
+        heuristic -= 300 
+
+    if opponent_player_score == -5:
+        heuristic += 250
+    
     if player_score < previous_player_score:
-        heuristic -= 100000
+        heuristic -= 250
     if opponent_player_score < previous_opponent_score:
-        heuristic += 250000
-        
-    return heuristic
+        heuristic += 200
+    return heuristic * weight
 
 def get_center_proximity(state: GameStateAbalone, player: PlayerAbalone) -> int:
     center = (8,4)
@@ -67,7 +77,7 @@ def get_center_proximity(state: GameStateAbalone, player: PlayerAbalone) -> int:
 
 
 def heuristic(state: GameStateAbalone, player: PlayerAbalone, scores: dict[int, float]) -> int:
-    return (get_score_difference(state, player, scores) * 50) - get_center_proximity(state, player)
+    return (get_score_difference(state, player, scores) ) - get_center_proximity(state, player) * 0.005 
 
 
 # ----------- Alpha-Beta search ------------ #
@@ -129,7 +139,6 @@ def h_alpha_beta_search(state: GameStateAbalone, player: PlayerAbalone, cutoff=c
                 if v <= alpha:
                  return v, move
           return v, move
-     
      return max_value(state, -inf, +inf, 0)    
 
 class MyPlayer(PlayerAbalone):
@@ -168,6 +177,4 @@ class MyPlayer(PlayerAbalone):
         print("self ", self)
         
 
-        if self.get_remaining_time() < 60:
-            pass
         return h_alpha_beta_search(current_state, self, h=heuristic)[1]
