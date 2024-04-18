@@ -4,7 +4,9 @@ from seahorse.game.action import Action
 from seahorse.game.game_state import GameState
 from math import inf
 
-def manhattan_dist(self, A: list[int], B: list[int]) -> int:
+CENTER = (8, 4)
+
+def manhattan_dist(A: list[int], B: list[int]) -> int:
     """
     Compute the Manhattan distance between two points.
 
@@ -51,47 +53,47 @@ class MyPlayer(PlayerAbalone):
         return players[1] if players[0] == self else players[0]
 
     def get_score_difference(self, state: GameStateAbalone, scores: dict[int, float]) -> int:
-        heuristic = 0
-        opponent = self.get_opponent(state)
-        curr_move = state.get_step()
-        weight = curr_move / 50
+        curr_step = state.get_step()
+        step_weight = curr_step / 50
 
+        opponent = self.get_opponent(state)
         previous_player_score = scores[self.get_id()]
         previous_opponent_score = scores[opponent.get_id()]
 
-        player_score = state.scores[self.get_id()]
-        opponent_player_score = state.scores[opponent.get_id()]
+        curr_player_score = state.scores[self.get_id()]
+        curr_opponent_player_score = state.scores[opponent.get_id()]
 
-        if opponent_player_score == -6:
-            heuristic += 300 
+        if curr_opponent_player_score == -6:
+            return 300 * step_weight
 
-        if player_score == -6:
-            heuristic -= 300 
+        if curr_player_score == -6:
+            return -300 * step_weight
 
-        if opponent_player_score == -5:
-            heuristic += 250
+        if curr_opponent_player_score == -5:
+            return 200 * step_weight
 
-        if player_score < previous_player_score:
-            heuristic -= 250
-        if opponent_player_score < previous_opponent_score:
-            heuristic += 200
-        return heuristic * weight
+        if curr_player_score < previous_player_score:
+            return -250 *  step_weight
+        
+        if curr_opponent_player_score < previous_opponent_score:
+            return 200 * step_weight
+        
+        return 0
 
     def get_center_proximity(self, state: GameStateAbalone) -> int:
-        center = (8, 4)
         env = state.get_rep().get_env()
-        dist = 0
-        nb_p = 0
+        total_distance = 0
+        nb_marbles = 0
 
-        for p in env.items():
-            key, value = p
+        for marble in env.items():
+            key, value = marble
             if value.get_owner_id() == self.get_id():
-                dist += manhattan_dist(center, key)
-                nb_p += 1
+                total_distance += manhattan_dist(CENTER, key)
+                nb_marbles += 1
 
-        return dist / nb_p
+        return total_distance / nb_marbles
 
-    def heuristic(self, state: GameStateAbalone, scores: dict[int, float]) -> int:
+    def calculate_heuristic(self, state: GameStateAbalone, scores: dict[int, float]) -> int:
         return (self.get_score_difference(state, scores)) - self.get_center_proximity(state) * 0.005 
 
     def cut_off(self, d: int):
@@ -103,8 +105,10 @@ class MyPlayer(PlayerAbalone):
         def max_value(state: GameStateAbalone, alpha: int, beta: int, depth: int) -> tuple[int, Action]:
             if state.is_done():
                 return state.scores[state.next_player.get_id()], None
+            
             if cutoff(state, depth):
                 return h(state, scores), None
+            
             v, move = -inf, None
             for a in state.get_possible_actions():
                 v2, _ = min_value(a.get_next_game_state(), alpha, beta, depth+1)
@@ -113,13 +117,16 @@ class MyPlayer(PlayerAbalone):
                     alpha = max(alpha, v)
                 if v >= beta:
                     return v, move
+                
             return v, move
 
         def min_value(state: GameStateAbalone, alpha: int, beta: int, depth: int) -> tuple[int, Action]:
             if state.is_done():
                 return state.scores[state.next_player.get_id()], None
+            
             if cutoff(state, depth):
                 return h(state, scores), None
+            
             v, move = inf, None
             for a in state.get_possible_actions():
                 v2, _ = max_value(a.get_next_game_state(), alpha, beta, depth+1)
@@ -128,7 +135,9 @@ class MyPlayer(PlayerAbalone):
                     beta = min(beta, v)
                 if v <= alpha:
                     return v, move
+                
             return v, move
+            
         return max_value(state, -inf, +inf, 0)
 
     def compute_action(self, current_state: GameStateAbalone, **kwargs) -> Action:
@@ -142,4 +151,4 @@ class MyPlayer(PlayerAbalone):
         Returns:
             Action: selected feasible action
         """
-        return self.h_alpha_beta_search(current_state, self.cut_off(2), self.heuristic)[1]
+        return self.h_alpha_beta_search(current_state, self.cut_off(2), self.calculate_heuristic)[1]
