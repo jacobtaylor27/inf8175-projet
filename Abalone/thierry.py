@@ -89,7 +89,6 @@ class MyPlayer(PlayerAbalone):
         return score
 
     def heuristic(self, current_state: GameStateAbalone):
-        return 0
         score = self.getScore(current_state)
         center = self.getNearCenterScore(current_state)
         weightScore = 0.8

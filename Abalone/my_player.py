@@ -1,11 +1,15 @@
+#------------------------------------------#
+# Laurie Bedard-Cote 2086165
+# Jacob Taylor - 2117518
+#------------------------------------------#
+
 from player_abalone import PlayerAbalone
 from game_state_abalone import GameStateAbalone
 from seahorse.game.action import Action
-from seahorse.game.game_state import GameState
 from math import inf
 
 CENTER = (8, 4)
-TIME_PER_MOVE = 50 # Just under 36 sec (time limit is 15 min -> 900 sec -> 900/25 = 36 sec)
+MOVE_TIME_THRESHOLD = 60 # AT this point we want to move faster
 STEP_DEPTH_THRESHOLD = 30 # Arbitrary number of steps to start to go deeper in the search
 
 def manhattan_dist(A: list[int], B: list[int]) -> int:
@@ -38,7 +42,7 @@ class MyPlayer(PlayerAbalone):
         piece_type (str): piece type of the player
     """
 
-    def __init__(self, piece_type: str, name: str = "bob", time_limit: float = 60*15, *args) -> None:
+    def __init__(self, piece_type: str, name: str = "LauJac", time_limit: float = 60*15, *args) -> None:
         """
         Initialize the PlayerAbalone instance.
 
@@ -134,19 +138,6 @@ class MyPlayer(PlayerAbalone):
         """
         return (self.get_score_difference(state, scores)) - self.get_center_proximity(state) * 0.005
 
-    def get_possible_actions_intelligent(self, current_state: GameState) -> list[Action]:
-        """
-        Return the possible actions that are beneficial to the player (no suicide moves)
-
-        Args:
-            current_state (GameState): Current game state representation
-
-        Returns:
-            list[Action]: List of possible actions that are beneficial to the player
-        """
-        return [action for action in current_state.get_possible_actions()
-                if action.get_next_game_state().get_player_score(self) >= current_state.get_player_score(self)]
-
     def cut_off(self, d: int):
         return lambda state, depth: depth > d
 
@@ -164,10 +155,12 @@ class MyPlayer(PlayerAbalone):
             tuple[int, Action]: Tuple with the best value and the best action
         """
         scores = state.get_scores()
-        start_time = self.get_remaining_time()
+        remaining_time = self.get_remaining_time()
         curr_move = state.get_step()
-        if curr_move < STEP_DEPTH_THRESHOLD:
-            cutoff = self.cut_off(2)
+        
+        # think deeper if we have time
+        if curr_move > STEP_DEPTH_THRESHOLD and remaining_time > MOVE_TIME_THRESHOLD:
+            cutoff = self.cut_off(3)
 
         def max_value(state: GameStateAbalone, alpha: int, beta: int, depth: int) -> tuple[int, Action]:
             if state.is_done():
@@ -178,15 +171,11 @@ class MyPlayer(PlayerAbalone):
 
             v, move = -inf, None
             for a in state.get_possible_actions():
-                v2, _ = min_value(a.get_next_game_state(),
-                                  alpha, beta, depth+1)
+                v2, _ = min_value(a.get_next_game_state(), alpha, beta, depth + 1)
                 if v2 > v:
                     v, move = v2, a
                     alpha = max(alpha, v)
                 if v >= beta:
-                    return v, move
-                if (start_time - self.get_remaining_time()) > TIME_PER_MOVE:
-                    print("Time limit reached")
                     return v, move
 
             return v, move
@@ -200,15 +189,11 @@ class MyPlayer(PlayerAbalone):
 
             v, move = inf, None
             for a in state.get_possible_actions():
-                v2, _ = max_value(a.get_next_game_state(),
-                                  alpha, beta, depth+1)
+                v2, _ = max_value(a.get_next_game_state(),alpha, beta, depth + 1)
                 if v2 < v:
                     v, move = v2, a
                     beta = min(beta, v)
                 if v <= alpha:
-                    return v, move
-                if (start_time - self.get_remaining_time()) > TIME_PER_MOVE:
-                    print("Time limit reached")
                     return v, move
 
             return v, move
@@ -226,13 +211,11 @@ class MyPlayer(PlayerAbalone):
             Action: Best action for the last move
         """
         possible_actions = list(current_state.get_possible_actions())
-        other_id = possible_actions[0].get_next_game_state(
-        ).next_player.get_id()
+        other_id = possible_actions[0].get_next_game_state().next_player.get_id()
         best_action = None
         best_score = current_state.max_score - 1
         for a in possible_actions:
-            score = a.get_next_game_state(
-            ).scores[self.id] - a.get_next_game_state().scores[other_id]
+            score = a.get_next_game_state().scores[self.id] - a.get_next_game_state().scores[other_id]
             if score > best_score:
                 best_action = a
                 best_score = score
@@ -252,4 +235,4 @@ class MyPlayer(PlayerAbalone):
         """
         if current_state.get_step() == current_state.max_step - 1:
             return self.last_move(current_state)
-        return self.h_alpha_beta_search(current_state, self.cut_off(3), self.calculate_heuristic)[1]
+        return self.h_alpha_beta_search(current_state, self.cut_off(2), self.calculate_heuristic)[1]

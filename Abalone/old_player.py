@@ -52,7 +52,6 @@ def get_score_difference(state: GameStateAbalone, player: PlayerAbalone, scores:
     return heuristic
 
 def get_center_proximity(state: GameStateAbalone, player: PlayerAbalone) -> int:
-    return 0
     center = (8,4)
     env = state.get_rep().get_env()
     dist = 0
