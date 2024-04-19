@@ -5,7 +5,7 @@ from seahorse.game.game_state import GameState
 from math import inf
 
 CENTER = (8, 4)
-TIME_PER_MOVE = 34 # Just under 36 sec (time limit is 15 min -> 900 sec -> 900/25 = 36 sec)
+TIME_PER_MOVE = 50 # Just under 36 sec (time limit is 15 min -> 900 sec -> 900/25 = 36 sec)
 STEP_DEPTH_THRESHOLD = 30 # Arbitrary number of steps to start to go deeper in the search
 
 def manhattan_dist(A: list[int], B: list[int]) -> int:
@@ -170,8 +170,6 @@ class MyPlayer(PlayerAbalone):
             cutoff = self.cut_off(2)
 
         def max_value(state: GameStateAbalone, alpha: int, beta: int, depth: int) -> tuple[int, Action]:
-            if (start_time - self.get_remaining_time()) > TIME_PER_MOVE:
-                return h(state, scores), None
             if state.is_done():
                 return state.scores[state.next_player.get_id()], None
 
@@ -187,13 +185,13 @@ class MyPlayer(PlayerAbalone):
                     alpha = max(alpha, v)
                 if v >= beta:
                     return v, move
+                if (start_time - self.get_remaining_time()) > TIME_PER_MOVE:
+                    print("Time limit reached")
+                    return v, move
 
             return v, move
 
         def min_value(state: GameStateAbalone, alpha: int, beta: int, depth: int) -> tuple[int, Action]:
-            if (start_time - self.get_remaining_time()) > TIME_PER_MOVE:
-                return h(state, scores), None
-
             if state.is_done():
                 return state.scores[state.next_player.get_id()], None
 
@@ -209,12 +207,24 @@ class MyPlayer(PlayerAbalone):
                     beta = min(beta, v)
                 if v <= alpha:
                     return v, move
+                if (start_time - self.get_remaining_time()) > TIME_PER_MOVE:
+                    print("Time limit reached")
+                    return v, move
 
             return v, move
 
         return max_value(state, -inf, +inf, 0)
 
     def last_move(self, current_state: GameStateAbalone) -> Action:
+        """
+        Calculate the best action for the last move.
+        
+        Args:
+            current_state (GameStateAbalone): Current game state representation
+            
+        Returns:
+            Action: Best action for the last move
+        """
         possible_actions = list(current_state.get_possible_actions())
         other_id = possible_actions[0].get_next_game_state(
         ).next_player.get_id()
@@ -242,4 +252,4 @@ class MyPlayer(PlayerAbalone):
         """
         if current_state.get_step() == current_state.max_step - 1:
             return self.last_move(current_state)
-        return self.h_alpha_beta_search(current_state, self.cut_off(5), self.calculate_heuristic)[1]
+        return self.h_alpha_beta_search(current_state, self.cut_off(3), self.calculate_heuristic)[1]
