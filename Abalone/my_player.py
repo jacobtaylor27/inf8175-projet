@@ -9,7 +9,7 @@ from seahorse.game.action import Action
 from math import inf
 
 CENTER = (8, 4)
-MOVE_TIME_THRESHOLD = 60 # AT this point we want to move faster
+MOVE_TIME_THRESHOLD = 60 # At this point we want to move faster
 STEP_DEPTH_THRESHOLD = 30 # Arbitrary number of steps to start to go deeper in the search
 
 def manhattan_dist(A: list[int], B: list[int]) -> int:
